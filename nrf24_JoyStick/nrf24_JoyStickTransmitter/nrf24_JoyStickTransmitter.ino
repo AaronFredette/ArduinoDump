@@ -18,7 +18,7 @@ RF24 radio(10,8);
 
 byte addresses[][6] = {"1Node","2Node"};
 
-int controllerData[4] = {0,0,1,0}; // x cord, y cord, laser instruct, win scenario
+int controllerData[4] = {5,89,1,0}; // x cord, y cord, laser instruct, win scenario
 
 // Used to control whether this node is sending or receiving // 1= transmit,  0 = receive
 bool role = 1;
@@ -55,19 +55,21 @@ void setup() {
 
 void loop() {
   
-  
-/****************** Ping Out Role ***************************/  
-if (role == 1)  {
-    
     radio.stopListening();                                    // First, stop listening so we can talk.
     
-    
     unsigned long start_time = micros();                             // Take the time, and send it.  This will block until complete
-    Serial.print(F("Now sending: "));
-    Serial.println(start_time);
+    Serial.println(F("Now sending: "));
+    Serial.print("x cord : ");
+    Serial.println(controllerData[0]);
+    Serial.print("y cord : ");
+    Serial.println(controllerData[1]);
+    Serial.print("laser command : ");
+    Serial.println(controllerData[2]);
+    Serial.print("win scenario : ");
+    Serial.println(controllerData[3]);
 
     
-     if (!radio.write( &start_time, sizeof(unsigned long) )){
+     if (!radio.write( &controllerData, sizeof(controllerData) )){
        Serial.println(F("failed to send"));
      }
         
@@ -86,15 +88,13 @@ if (role == 1)  {
     if ( timeout ){                                             // Describe the results
         Serial.println(F("Failed, response timed out."));
     }else{
-        unsigned long got_time;                                 // Grab the response, compare, and send to debugging spew
-        radio.read( &got_time, sizeof(unsigned long) );
+        int success;                                 // Grab the response, compare, and send to debugging spew
+        radio.read( &success, sizeof(success) );
         unsigned long end_time = micros();
         
         // Spew it
-        Serial.print(F("Sent "));
-        Serial.print(start_time);
-        Serial.print(F(", Got response "));
-        Serial.print(got_time);
+        Serial.print(F("Got response "));
+        Serial.print(success);
         Serial.print(F(", Round-trip delay "));
         Serial.print(end_time-start_time);
         Serial.println(F(" microseconds"));
@@ -102,50 +102,5 @@ if (role == 1)  {
 
     // Try again 1s later
     delay(1000);
-  }
-
-
-
-/****************** Pong Back Role ***************************/
-
-  if ( role == 0 )
-  {
-    unsigned long got_time;
-    
-    if( radio.available()){
-                                                                    // Variable for the received timestamp
-      while (radio.available()) {                                   // While there is data ready
-        radio.read( &got_time, sizeof(unsigned long) );             // Get the payload
-      }
-     
-      radio.stopListening();                                        // First, stop listening so we can talk   
-      radio.write( &got_time, sizeof(unsigned long) );              // Send the final one back.      
-      radio.startListening();                                       // Now, resume listening so we catch the next packets.     
-      Serial.print(F("Sent response "));
-      Serial.println(got_time);  
-   }
- }
-
-
-
-
-/****************** Change Roles via Serial Commands ***************************/
-
-  if ( Serial.available() )
-  {
-    char c = toupper(Serial.read());
-    if ( c == 'T' && role == 0 ){      
-      Serial.println(F("*** CHANGING TO TRANSMIT ROLE -- PRESS 'R' TO SWITCH BACK"));
-      role = 1;                  // Become the primary transmitter (ping out)
-    
-   }else
-    if ( c == 'R' && role == 1 ){
-      Serial.println(F("*** CHANGING TO RECEIVE ROLE -- PRESS 'T' TO SWITCH BACK"));      
-       role = 0;                // Become the primary receiver (pong back)
-       radio.startListening();
-       
-    }
-  }
-
-
+  
 } // Loop
