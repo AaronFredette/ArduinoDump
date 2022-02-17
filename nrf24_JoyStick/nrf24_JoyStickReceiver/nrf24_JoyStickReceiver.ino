@@ -19,6 +19,7 @@ RF24 radio(53,8);
 
 byte addresses[][6] = {"1Node","2Node"};
 
+// int data[4];
 // Used to control whether this node is sending or receiving
 bool role = 0;
 
@@ -109,19 +110,27 @@ if (role == 1)  {
 
   if ( role == 0 )
   {
-    unsigned long got_time;
+    int data[4];
     
     if( radio.available()){
                                                                     // Variable for the received timestamp
       while (radio.available()) {                                   // While there is data ready
-        radio.read( &got_time, sizeof(unsigned long) );             // Get the payload
+        radio.read( &data, sizeof(data) );             // Get the payload
       }
-     
+
+     int received = 1;
       radio.stopListening();                                        // First, stop listening so we can talk   
-      radio.write( &got_time, sizeof(unsigned long) );              // Send the final one back.      
+      radio.write( &received, sizeof(int) );              // Send the final one back.      
       radio.startListening();                                       // Now, resume listening so we catch the next packets.     
-      Serial.print(F("Sent response "));
-      Serial.println(got_time);  
+      Serial.print(F("Got Data : "));
+      Serial.print("x cord :");  
+      Serial.print(data[0]);
+      Serial.print(", y cord :");  
+      Serial.print(data[1]);
+      Serial.print(", laser control :");  
+      Serial.print(data[2]);
+      Serial.print(", win scenario:");  
+      Serial.println(data[3]);
    }
  }
 
