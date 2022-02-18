@@ -54,6 +54,7 @@ int prevXValue = 0;
 int btnPin = 5;
 int jsXPin = A0;
 int jsYPin = A1;
+int winPin = 4;
 
 
 /**********************************************************/
@@ -91,7 +92,12 @@ void setup() {
 
   //wire up joystick button
   pinMode(btnPin, INPUT);
+  pinMode(winPin,INPUT);
   digitalWrite(btnPin, HIGH);
+  //digitalWrite(winPin, HIGH);
+
+  Serial.print("High: ");
+  Serial.println(HIGH);
 }
 
 void loop() {
@@ -136,6 +142,11 @@ void readJoyStick() {
       laserState = controllerData[laserIndex];      
     }
   }
+
+  //always read the win pin
+  controllerData[winIndex] = digitalRead(winPin);
+  Serial.print("Win Pin:");
+  Serial.println(controllerData[winIndex]);
 }
 
 void transmit() {
@@ -174,7 +185,7 @@ void transmit() {
     }
 
     if ( timeout ) {                                            // Describe the results
-      Serial.println(F("Failed, response timed out."));
+      //Serial.println(F("Failed, response timed out."));
     } else {
       int success;                                 // Grab the response, compare, and send to debugging spew
       radio.read( &success, sizeof(success) );
