@@ -12,6 +12,7 @@
 //define servos
 ServoEasing myXServo;
 ServoEasing myYServo;
+ServoEasing treatServo;
 /****************** User Config ***************************/
 /***      Set this radio as radio number 0 or 1         ***/
 bool radioNumber = 0;
@@ -39,13 +40,21 @@ unsigned long lastLaserExecute = 0;
 int xServoPin = 2;
 int yServoPin = 3;
 int laserPin = 4;
+int treatServoPin = 5;
+
 // configure value stores
 int laserState = LOW;
-int win =0;
+int win = 0;
 int xValue = 0;
 int prevXValue = 0;
 int yValue = 0;
 int prevYValue = 0;
+bool treatDispensed = false;
+
+//treat servo positions
+int treatStandBy = 120; // closed will also line up the dispensing holes
+int treatReload = 30;
+
 
 void setup() {
   Serial.begin(115200);
@@ -62,13 +71,9 @@ void setup() {
   radio.setPALevel(RF24_PA_MAX);
   
   // Open a writing and reading pipe on each radio, with opposite addresses
-  if(radioNumber){
-    radio.openWritingPipe(addresses[1]);
-    radio.openReadingPipe(1,addresses[0]);
-  }else{
-    radio.openWritingPipe(addresses[0]);
-    radio.openReadingPipe(1,addresses[1]);
-  }
+  radio.openWritingPipe(addresses[0]);
+  radio.openReadingPipe(1,addresses[1]);
+  
   
   // Start the radio listening for data
   radio.startListening();
@@ -81,25 +86,48 @@ void setup() {
   
   myXServo.attach(xServoPin );
   myXServo.easeTo(88,20);
-  Serial.print("Writing initial positions");
+  
   myYServo.attach(yServoPin);
   myYServo.easeTo(88,20);
+
+  treatServo.attach(treatServoPin);
+  treatServo.easeTo(treatStandBy,20);
 
   delay(1000);
 
   // Now move faster
   myXServo.setSpeed(100);  // This speed is taken if no speed argument is given.
   myYServo.setSpeed(100);
+  treatServo.setSpeed(100);
 }
 
 void loop() {
-    readData();   
-    executeCommands(); 
+
+//To DO : treat dispense code is never being called.
+    readData();
+    if(!win){
+      executeCommands(); 
+    }else if (!treatDispensed){
+      dispenseTreat();
+    }
+    
 } // Loop
+
+void dispenseTreat(){
+  Serial.println("dispense");
+  treatServo.easeTo(treatReload);
+  delay(1000);
+  
+  treatServo.easeTo(treatStandBy);
+  delay(1000);
+  treatDispensed = true;
+  //TO DO: Set x and y servos to point to base of treat slide
+}
 
 void executeCommands(){
   unsigned long currentMillis = millis();
-
+ 
+  
   //move servo
   xValue = data[xAxisIndex];
   yValue = data[yAxisIndex];
@@ -132,6 +160,10 @@ void readData(){
       radio.stopListening();                                        // First, stop listening so we can talk   
       radio.write( &received, sizeof(int) );              // Send the final one back.      
       radio.startListening();                                       // Now, resume listening so we catch the next packets.     
+
+      //TODO : add logic to rest game if the win is going from true to false
+      win = data[winIndex];
+      
       Serial.print(F("Got Data : "));
       Serial.print("x cord :");  
       Serial.print(data[0]);
