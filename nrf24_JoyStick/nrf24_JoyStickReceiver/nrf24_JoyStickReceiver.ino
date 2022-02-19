@@ -32,9 +32,8 @@ int winIndex = 3;
 bool role = 0;
 
 /***************Servo config*******************/
-int servoMovementInterval = 50;   
 int exe_interval = 250;
-unsigned long lastServoExecuteMillis = 0;
+unsigned long lastLaserExecute = 0;
 
 //configure pins
 int xServoPin = 2;
@@ -99,18 +98,11 @@ void loop() {
 } // Loop
 
 void executeCommands(){
-  /*data[0] = 70;
-   data[1] = 90;
-   data[2] = 0;
-   data[3] = 0;*/
-   xValue = data[xAxisIndex];
-   yValue = data[yAxisIndex];
-  Serial.print("Writing to servo");
-  Serial.print(xValue);
-  Serial.print(",");
-  Serial.println(yValue);
-  
-  
+  unsigned long currentMillis = millis();
+
+  //move servo
+  xValue = data[xAxisIndex];
+  yValue = data[yAxisIndex];
   myYServo.startEaseTo(yValue);
   myXServo.startEaseTo(xValue);
   synchronizeAllServosAndStartInterrupt(false);
@@ -120,56 +112,13 @@ void executeCommands(){
         delay(REFRESH_INTERVAL / 1000); // optional 20ms delay - REFRESH_INTERVAL is in Microseconds
     } while (!updateAllServos());
 
-    if(data[laserIndex] != laserState){
+    if(data[laserIndex] != laserState && lastLaserExecute - currentMillis > exe_interval ){
+      Serial.print(" changing laser state to : ");
+      Serial.println(data[laserIndex]);
       digitalWrite(laserPin, data[laserIndex]);
+      laserState = data[laserIndex];
     }
-  /*Serial.println("writing to servo");
-   xValue = data[xAxisIndex];
-    yValue = data[xAxisIndex];
-    myXServo.write(xValue);
-    myYServo.write(yValue);*/
-    
-  /*if (currentMillis - lastServoExecuteMillis >= servoMovementInterval) {
-    Serial.println("executing Commands");
-    //set values from data 
-    xValue = data[xAxisIndex];
-    yValue = data[xAxisIndex];
-    laserState = data[laserIndex];
-    win = data[winIndex];
-    
-    int targetXValue = 0;
-    int xDiff = xValue - prevXValue;
-    
-    if (prevXValue != xValue && abs(xDiff) > 1) {
-      if (prevXValue < xValue) {
-        targetXValue = xValue + 1;
-      } else {
-        targetXValue = xValue - 1;
-      }
-
-      myXServo.write(xValue);
-      Serial.print(xValue);
-      Serial.print(",");
-      prevXValue = xValue;
-    }
-
-    int targetYValue = 0;
-    int yDiff = yValue - prevYValue;
-    if (prevYValue != yValue && abs(yDiff) > 1) {
-      if (prevYValue < yValue) {
-        targetYValue = yValue + 1;
-      } else {
-        targetYValue = yValue - 1;
-      }
-
-
-      myYServo.write(yValue);
-      Serial.print(yValue);
-      prevYValue = yValue;
-    }
-
-    lastServoExecuteMillis = currentMillis;
-  }*/
+ 
 }
 
 void readData(){
