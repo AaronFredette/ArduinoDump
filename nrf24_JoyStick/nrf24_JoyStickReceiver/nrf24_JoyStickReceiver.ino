@@ -8,7 +8,10 @@
 #include <SPI.h>
 #include "RF24.h"
 #include <printf.h>
-
+#include <ServoEasing.hpp>
+//define servos
+ServoEasing myXServo;
+ServoEasing myYServo;
 /****************** User Config ***************************/
 /***      Set this radio as radio number 0 or 1         ***/
 bool radioNumber = 0;
@@ -18,10 +21,32 @@ RF24 radio(53,8);
 /**********************************************************/
 
 byte addresses[][6] = {"1Node","2Node"};
-
-// int data[4];
+int data[4];
+//define indexes in data array to avoid confusion
+int xAxisIndex = 0;
+int yAxisIndex = 1;
+int laserIndex = 2;
+int winIndex = 3;
+ 
 // Used to control whether this node is sending or receiving
 bool role = 0;
+
+/***************Servo config*******************/
+int servoMovementInterval = 50;   
+int exe_interval = 250;
+unsigned long lastServoExecuteMillis = 0;
+
+//configure pins
+int xServoPin = 2;
+int yServoPin = 3;
+int laserPin = 4;
+// configure value stores
+int laserState = LOW;
+int win =0;
+int xValue = 0;
+int prevXValue = 0;
+int yValue = 0;
+int prevYValue = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -31,10 +56,7 @@ void setup() {
   radio.setAutoAck(false);
   radio.setChannel(78);
   radio.setRetries(15,15);
-  Serial.println(F("RF24/examples/GettingStarted"));
-  Serial.println(F("*** PRESS 'T' to begin transmitting to the other node"));
-  
-  
+    
 
   // Set the PA Level low to prevent power supply related issues since this is a
  // getting_started sketch, and the likelihood of close proximity of the devices. RF24_PA_MAX is default.
@@ -51,68 +73,107 @@ void setup() {
   
   // Start the radio listening for data
   radio.startListening();
+  Serial.println(F("Reciever initializing"));
   radio.printDetails();
+
+  //Configure servos and button
+   pinMode(laserPin, OUTPUT);
+  digitalWrite(laserPin, LOW);
+  
+  myXServo.attach(xServoPin );
+  myXServo.easeTo(88,20);
+  Serial.print("Writing initial positions");
+  myYServo.attach(yServoPin);
+  myYServo.easeTo(88,20);
+
+  delay(1000);
+
+  // Now move faster
+  myXServo.setSpeed(100);  // This speed is taken if no speed argument is given.
+  myYServo.setSpeed(100);
 }
 
 void loop() {
+    readData();   
+    executeCommands(); 
+} // Loop
+
+void executeCommands(){
+  /*data[0] = 70;
+   data[1] = 90;
+   data[2] = 0;
+   data[3] = 0;*/
+   xValue = data[xAxisIndex];
+   yValue = data[yAxisIndex];
+  Serial.print("Writing to servo");
+  Serial.print(xValue);
+  Serial.print(",");
+  Serial.println(yValue);
   
   
-/****************** Ping Out Role ***************************/  
-if (role == 1)  {
-    
-    radio.stopListening();                                    // First, stop listening so we can talk.
-    
-    
-    Serial.println(F("Now sending"));
+  myYServo.startEaseTo(yValue);
+  myXServo.startEaseTo(xValue);
+  synchronizeAllServosAndStartInterrupt(false);
+  
+  do {
+        // here you can call your own program
+        delay(REFRESH_INTERVAL / 1000); // optional 20ms delay - REFRESH_INTERVAL is in Microseconds
+    } while (!updateAllServos());
 
-    unsigned long start_time = micros();                             // Take the time, and send it.  This will block until complete
-    const char text[] = "hello from work";
-     if (!radio.write( &text, sizeof(text) )){
-       Serial.println(F("failed"));
-     }
-        
-    radio.startListening();                                    // Now, continue listening
-    
-    unsigned long started_waiting_at = micros();               // Set up a timeout period, get the current microseconds
-    boolean timeout = false;                                   // Set up a variable to indicate if a response was received or not
-    
-    while ( ! radio.available() ){                             // While nothing is received
-      if (micros() - started_waiting_at > 200000 ){            // If waited longer than 200ms, indicate timeout and exit while loop
-          timeout = true;
-          break;
-      }      
+    if(data[laserIndex] != laserState){
+      digitalWrite(laserPin, data[laserIndex]);
     }
-        
-    if ( timeout ){                                             // Describe the results
-        Serial.println(F("Failed, response timed out."));
-    }else{
-        unsigned long got_time;                                 // Grab the response, compare, and send to debugging spew
-        radio.read( &got_time, sizeof(unsigned long) );
-        unsigned long end_time = micros();
-        
-        // Spew it
-        Serial.print(F("Sent "));
-        Serial.print(start_time);
-        Serial.print(F(", Got response "));
-        Serial.print(got_time);
-        Serial.print(F(", Round-trip delay "));
-        Serial.print(end_time-start_time);
-        Serial.println(F(" microseconds"));
+  /*Serial.println("writing to servo");
+   xValue = data[xAxisIndex];
+    yValue = data[xAxisIndex];
+    myXServo.write(xValue);
+    myYServo.write(yValue);*/
+    
+  /*if (currentMillis - lastServoExecuteMillis >= servoMovementInterval) {
+    Serial.println("executing Commands");
+    //set values from data 
+    xValue = data[xAxisIndex];
+    yValue = data[xAxisIndex];
+    laserState = data[laserIndex];
+    win = data[winIndex];
+    
+    int targetXValue = 0;
+    int xDiff = xValue - prevXValue;
+    
+    if (prevXValue != xValue && abs(xDiff) > 1) {
+      if (prevXValue < xValue) {
+        targetXValue = xValue + 1;
+      } else {
+        targetXValue = xValue - 1;
+      }
+
+      myXServo.write(xValue);
+      Serial.print(xValue);
+      Serial.print(",");
+      prevXValue = xValue;
     }
 
-    // Try again 1s later
-    delay(1000);
-  }
+    int targetYValue = 0;
+    int yDiff = yValue - prevYValue;
+    if (prevYValue != yValue && abs(yDiff) > 1) {
+      if (prevYValue < yValue) {
+        targetYValue = yValue + 1;
+      } else {
+        targetYValue = yValue - 1;
+      }
 
 
+      myYServo.write(yValue);
+      Serial.print(yValue);
+      prevYValue = yValue;
+    }
 
-/****************** Pong Back Role ***************************/
+    lastServoExecuteMillis = currentMillis;
+  }*/
+}
 
-  if ( role == 0 )
-  {
-    int data[4];
-    
-    if( radio.available()){
+void readData(){
+  if( radio.available()){
                                                                     // Variable for the received timestamp
       while (radio.available()) {                                   // While there is data ready
         radio.read( &data, sizeof(data) );             // Get the payload
@@ -132,28 +193,4 @@ if (role == 1)  {
       Serial.print(", win scenario:");  
       Serial.println(data[3]);
    }
- }
-
-
-
-
-/****************** Change Roles via Serial Commands ***************************/
-
-  if ( Serial.available() )
-  {
-    char c = toupper(Serial.read());
-    if ( c == 'T' && role == 0 ){      
-      Serial.println(F("*** CHANGING TO TRANSMIT ROLE -- PRESS 'R' TO SWITCH BACK"));
-      role = 1;                  // Become the primary transmitter (ping out)
-    
-   }else
-    if ( c == 'R' && role == 1 ){
-      Serial.println(F("*** CHANGING TO RECEIVE ROLE -- PRESS 'T' TO SWITCH BACK"));      
-       role = 0;                // Become the primary receiver (pong back)
-       radio.startListening();
-       
-    }
-  }
-
-
-} // Loop
+}
