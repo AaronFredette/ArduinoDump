@@ -42,6 +42,7 @@ unsigned long lastExecutedMillis = 0;
 
 //set initial values
 int laserState = LOW; // keep track of laser state to determine if we should update
+int winState = LOW;
 int bValue = 0;
 int xValue = 0;
 int yValue = 0;
@@ -132,21 +133,20 @@ void readJoyStick() {
     
     //Serial.println(bValue==LOW);
     if (bValue == LOW) {
-      if (laserState == LOW) {
-        controllerData[laserIndex] = HIGH;
-        Serial.println("setting high");
-      } else {
-        controllerData[laserIndex] = LOW;
-        Serial.println("setting low");
-      }
-      laserState = controllerData[laserIndex];      
+      laserState = !laserState;
+       controllerData[laserIndex] = laserState;
+    }
+    
+    int winValue = digitalRead(winPin);
+    if(winValue == LOW){
+      winState = !winState;
+      controllerData[winIndex] = winState;
+      Serial.print("Win state:");
+      Serial.println(controllerData[winIndex]);
     }
   }
 
-  //always read the win pin
-  controllerData[winIndex] = digitalRead(winPin);
-  Serial.print("Win Pin:");
-  Serial.println(controllerData[winIndex]);
+  
 }
 
 void transmit() {
