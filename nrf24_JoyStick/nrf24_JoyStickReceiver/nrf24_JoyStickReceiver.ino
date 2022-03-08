@@ -33,7 +33,7 @@ int winIndex = 3;
 bool role = 0;
 
 /***************Servo config*******************/
-int exe_interval = 250;
+int exe_interval = 400;
 unsigned long lastLaserExecute = 0;
 
 //configure pins
@@ -96,8 +96,8 @@ void setup() {
   delay(1000);
 
   // Now move faster
-  myXServo.setSpeed(100);  // This speed is taken if no speed argument is given.
-  myYServo.setSpeed(100);
+  myXServo.setSpeed(150);  // This speed is taken if no speed argument is given.
+  myYServo.setSpeed(150);
   treatServo.setSpeed(100);
 }
 
@@ -114,14 +114,22 @@ void loop() {
 } // Loop
 
 void dispenseTreat(){
-  Serial.println("dispense");
+  //move laser to point at base of slide
+  myYServo.startEaseTo(40);
+  myXServo.startEaseTo(70);
+  synchronizeAllServosAndStartInterrupt(false);
   treatServo.easeTo(treatReload);
+  do {
+        delay(REFRESH_INTERVAL / 1000); // optional 20ms delay - REFRESH_INTERVAL is in Microseconds
+    } while (!updateAllServos());
+    
+  Serial.println("dispense");
   delay(1000);
   
   treatServo.easeTo(treatStandBy);
   delay(1000);
   treatDispensed = true;
-  //TO DO: Set x and y servos to point to base of treat slide
+  
 }
 
 void executeCommands(){
@@ -161,8 +169,11 @@ void readData(){
       radio.write( &received, sizeof(int) );              // Send the final one back.      
       radio.startListening();                                       // Now, resume listening so we catch the next packets.     
 
-      //TODO : add logic to rest game if the win is going from true to false
       win = data[winIndex];
+      // reset the game if treat was dispensed but the game is no longer a win
+      if(treatDispensed && !win){
+        treatDispensed = false;
+      }
       
       Serial.print(F("Got Data : "));
       Serial.print("x cord :");  
