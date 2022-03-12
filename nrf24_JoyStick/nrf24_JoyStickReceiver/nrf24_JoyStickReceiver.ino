@@ -18,7 +18,8 @@ ServoEasing treatServo;
 bool radioNumber = 0;
 
 /* Hardware configuration: Set up nRF24L01 radio on SPI bus plus pins 7 & 8 */
-RF24 radio(53,8);
+RF24 radio(10,8); // pro mini ce, csn
+//RF24 radio(53,8); // mega ce, csn
 /**********************************************************/
 
 byte addresses[][6] = {"1Node","2Node"};
@@ -73,7 +74,7 @@ void setup() {
   // Open a writing and reading pipe on each radio, with opposite addresses
   radio.openWritingPipe(addresses[0]);
   radio.openReadingPipe(1,addresses[1]);
-  
+    
   
   // Start the radio listening for data
   radio.startListening();
@@ -88,7 +89,7 @@ void setup() {
   myXServo.easeTo(88,20);
   
   myYServo.attach(yServoPin);
-  myYServo.easeTo(88,20);
+  myYServo.easeTo(70,20);
 
   treatServo.attach(treatServoPin);
   treatServo.easeTo(treatStandBy,20);
@@ -138,7 +139,13 @@ void executeCommands(){
   
   //move servo
   xValue = data[xAxisIndex];
+  if(xValue > 170){
+    xValue = 170;
+  }
   yValue = data[yAxisIndex];
+  if(yValue > 170){
+    yValue = 170;
+  }
   myYServo.startEaseTo(yValue);
   myXServo.startEaseTo(xValue);
   synchronizeAllServosAndStartInterrupt(false);
