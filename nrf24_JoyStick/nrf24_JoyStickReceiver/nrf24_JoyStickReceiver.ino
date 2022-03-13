@@ -71,20 +71,17 @@ void setup() {
   // Set the PA Level low to prevent power supply related issues since this is a
  // getting_started sketch, and the likelihood of close proximity of the devices. RF24_PA_MAX is default.
   radio.setPALevel(RF24_PA_MAX);
-  //radio.setDataRate(RF24_250KBPS);
-  
   // Open a writing and reading pipe on each radio, with opposite addresses
-  //radio.openWritingPipe(addresses[0]);
   radio.openReadingPipe(0,address);
+  //radio.setDataRate(RF24_250KBPS);
     
-  
   // Start the radio listening for data
   radio.startListening();
   Serial.println(F("Reciever initializing"));
   radio.printDetails();
 
   //Configure servos and button
-   pinMode(laserPin, OUTPUT);
+  pinMode(laserPin, OUTPUT);
   digitalWrite(laserPin, LOW);
   
   myXServo.attach(xServoPin );
@@ -138,31 +135,9 @@ void dispenseTreat(){
 void executeCommands(){
   unsigned long currentMillis = millis();
  
-  
-  //move servo
-  xValue = data[xAxisIndex];
-  if(xValue > 170){
-    xValue = 170;
-  }
-  if(xValue < 10){
-    xValue = 10;
-  }
-  
-  yValue = data[yAxisIndex];
-  if(yValue > 170){
-    yValue = 170;
-  }
-  
-  if(yValue < 10){
-    yValue = 10;
-  }
-
-  /*Serial.print("writing to servo : ");
-  Serial.print("x Value ");
-  Serial.print(xValue);
-  Serial.print(" , y Value ");
-  Serial.println(yValue); */
-  
+   xValue = (map(data[xAxisIndex], 0, 1023, 10, 170));
+   yValue = (map(data[yAxisIndex], 0, 1023, 10, 170));
+ 
   myYServo.startEaseTo(yValue);
   myXServo.startEaseTo(xValue);
   synchronizeAllServosAndStartInterrupt(false);

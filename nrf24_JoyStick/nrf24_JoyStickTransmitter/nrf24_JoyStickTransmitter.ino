@@ -77,21 +77,19 @@ void setup() {
   // Set the PA Level low to prevent power supply related issues since this is a
   // getting_started sketch, and the likelihood of close proximity of the devices. RF24_PA_MAX is default.
   radio.setPALevel(RF24_PA_MAX);
-  
+
 
   // Open a writing and reading pipe on each radio, with opposite addresses
   radio.openWritingPipe(address);
-  
+
   radio.stopListening(); // Start the radio listening for data
   radio.printDetails();
 
 
   //wire up joystick button
   pinMode(btnPin, INPUT);
-  pinMode(winPin,INPUT);
+  pinMode(winPin, INPUT);
   digitalWrite(btnPin, HIGH);
-  //digitalWrite(winPin, HIGH);
-
 }
 
 void loop() {
@@ -105,41 +103,17 @@ void readJoyStick() {
 
   // slow down joy stick input by only polling the input every 10th of second
   if (currentMillis - lastJoyStickReadMillis >= joyStickReadInterval) {
-    //joy stick
-    //map(value, fromLow, fromHigh, toLow, toHigh)
-    xValue = (map(analogRead(A0), 0, 1023, 10, 170) * .5) + (prevXValue * .5);
-    yValue = (map(analogRead(A1), 0, 1023, 10, 170) * .5) + (prevYValue * .5);
 
+    xValue = analogRead(A0);
+    yValue = analogRead(A1);
     //add values to data array
     controllerData[xAxisIndex] = xValue;
     controllerData[yAxisIndex] = yValue;
+    controllerData[laserIndex] = digitalRead(btnPin);
+    controllerData[winIndex] = digitalRead(winPin);
+    
     lastJoyStickReadMillis = currentMillis;
-
-    /*  Serial.print("x value:");
-      Serial.print(xValue);
-      Serial.print(", y value:");
-      Serial.print(yValue);
-      Serial.print(", b value:");*/
-
-    /*********** read button for laser toggle *****************/
-    bValue = digitalRead(btnPin);
-    
-    //Serial.println(bValue==LOW);
-    if (bValue == LOW) {
-      laserState = !laserState;
-       controllerData[laserIndex] = laserState;
-    }
-    
-    int winValue = digitalRead(winPin);
-    if(winValue == LOW){
-      winState = !winState;
-      controllerData[winIndex] = winState;
-      Serial.print("Win state:");
-      Serial.println(controllerData[winIndex]);
-    }
   }
-
-  
 }
 
 void transmit() {
@@ -147,10 +121,8 @@ void transmit() {
 
   // execute a simlar rate as joystick
   if (currentMillis - lastSendmillis >= joyStickReadInterval) {
-    //radio.stopListening();                                    // First, stop listening so we can talk.
-
-    //unsigned long start_time = micros();                             // Take the time, and send it.  This will block until complete
-    Serial.println(F("Now sending: "));
+    
+    /*Serial.println(F("Now sending: "));
     Serial.print("x cord : ");
     Serial.println(controllerData[xAxisIndex]);
     Serial.print("y cord : ");
@@ -158,43 +130,10 @@ void transmit() {
     Serial.print("laser command : ");
     Serial.println(controllerData[laserIndex]);
     Serial.print("win scenario : ");
-    Serial.println(controllerData[winIndex]);
+    Serial.println(controllerData[winIndex]);*/
 
     radio.write(&controllerData, sizeof(controllerData));
-    
-    /*if (!radio.write( &controllerData, sizeof(controllerData) )) {
-      Serial.println(F("failed to send"));
-    }
-
-    radio.startListening();                                    // Now, continue listening
-
-    unsigned long started_waiting_at = micros();               // Set up a timeout period, get the current microseconds
-    boolean timeout = false;                                   // Set up a variable to indicate if a response was received or not
-
-    while ( ! radio.available() ) {                            // While nothing is received
-      if (micros() - started_waiting_at > 200000 ) {           // If waited longer than 200ms, indicate timeout and exit while loop
-        timeout = true;
-        break;
-      }
-    }
-
-    if ( timeout ) {                                            // Describe the results
-      Serial.println(F("Failed, response timed out."));
-    } else {
-      int success;                                 // Grab the response, compare, and send to debugging spew
-      radio.read( &success, sizeof(success) );
-      unsigned long end_time = micros();
-
-      // Spew it
-      Serial.print(F("Got response "));
-      Serial.print(success);
-      Serial.print(F(", Round-trip delay "));
-      Serial.print(end_time - start_time);
-      Serial.println(F(" microseconds"));
-    } */
     lastSendmillis = millis();
-    // Try again 1s later
-    //    delay(250);
   }
 
 }
