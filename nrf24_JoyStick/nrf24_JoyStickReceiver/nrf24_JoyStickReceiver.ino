@@ -22,7 +22,8 @@ RF24 radio(10,8); // pro mini ce, csn
 //RF24 radio(53,8); // mega ce, csn
 /**********************************************************/
 
-byte addresses[][6] = {"1Node","2Node"};
+//byte addresses[][6] = {"1Node","2Node"};
+const byte address[6] = "06720";
 int data[4];
 //define indexes in data array to avoid confusion
 int xAxisIndex = 0;
@@ -70,10 +71,11 @@ void setup() {
   // Set the PA Level low to prevent power supply related issues since this is a
  // getting_started sketch, and the likelihood of close proximity of the devices. RF24_PA_MAX is default.
   radio.setPALevel(RF24_PA_MAX);
+  //radio.setDataRate(RF24_250KBPS);
   
   // Open a writing and reading pipe on each radio, with opposite addresses
-  radio.openWritingPipe(addresses[0]);
-  radio.openReadingPipe(1,addresses[1]);
+  //radio.openWritingPipe(addresses[0]);
+  radio.openReadingPipe(0,address);
     
   
   // Start the radio listening for data
@@ -187,9 +189,10 @@ void readData(){
       }
 
      int received = 1;
-      radio.stopListening();                                        // First, stop listening so we can talk   
+      /*radio.stopListening();                                        // First, stop listening so we can talk   
       radio.write( &received, sizeof(int) );              // Send the final one back.      
       radio.startListening();                                       // Now, resume listening so we catch the next packets.     
+      */
 
       win = data[winIndex];
       // reset the game if treat was dispensed but the game is no longer a win
