@@ -114,8 +114,8 @@ void readJoyStick() {
   if (currentMillis - lastJoyStickReadMillis >= joyStickReadInterval) {
     //joy stick
     //map(value, fromLow, fromHigh, toLow, toHigh)
-    xValue = (map(analogRead(A0), 0, 1023, 10, 170));// * .5) + (prevXValue * .5);
-    yValue = (map(analogRead(A1), 0, 1023, 10, 170));// * .5) + (prevYValue * .5);
+    xValue = (map(analogRead(A0), 0, 1023, 10, 170) * .5) + (prevXValue * .5);
+    yValue = (map(analogRead(A1), 0, 1023, 10, 170) * .5) + (prevYValue * .5);
 
     //add values to data array
     controllerData[xAxisIndex] = xValue;
