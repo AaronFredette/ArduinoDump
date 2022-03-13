@@ -142,10 +142,25 @@ void executeCommands(){
   if(xValue > 170){
     xValue = 170;
   }
+  if(xValue < 10){
+    xValue = 10;
+  }
+  
   yValue = data[yAxisIndex];
   if(yValue > 170){
     yValue = 170;
   }
+  
+  if(yValue < 10){
+    yValue = 10;
+  }
+
+  /*Serial.print("writing to servo : ");
+  Serial.print("x Value ");
+  Serial.print(xValue);
+  Serial.print(" , y Value ");
+  Serial.println(yValue); */
+  
   myYServo.startEaseTo(yValue);
   myXServo.startEaseTo(xValue);
   synchronizeAllServosAndStartInterrupt(false);
