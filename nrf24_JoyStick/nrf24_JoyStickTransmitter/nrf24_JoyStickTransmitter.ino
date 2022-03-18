@@ -70,14 +70,14 @@ void setup() {
   Serial.println(radio.begin());
   radio.setAutoAck(false);
   radio.setRetries(15, 15);
-  radio.setChannel(78);
+  radio.setChannel(85);
   Serial.println(F("Starting joystick transmitter"));
 
 
   // Set the PA Level low to prevent power supply related issues since this is a
   // getting_started sketch, and the likelihood of close proximity of the devices. RF24_PA_MAX is default.
-  radio.setPALevel(RF24_PA_MAX);
-
+  radio.setPALevel(RF24_PA_MIN);
+  radio.setDataRate(RF24_250KBPS);
 
   // Open a writing and reading pipe on each radio, with opposite addresses
   radio.openWritingPipe(address);
@@ -109,8 +109,8 @@ void readJoyStick() {
     //add values to data array
     controllerData[xAxisIndex] = xValue;
     controllerData[yAxisIndex] = yValue;
-    controllerData[laserIndex] = digitalRead(btnPin);
-    controllerData[winIndex] = digitalRead(winPin);
+    controllerData[laserIndex] = !digitalRead(btnPin);
+    controllerData[winIndex] = !digitalRead(winPin);
     
     lastJoyStickReadMillis = currentMillis;
   }
