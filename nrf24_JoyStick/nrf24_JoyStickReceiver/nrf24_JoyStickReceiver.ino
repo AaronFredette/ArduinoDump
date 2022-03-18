@@ -57,6 +57,10 @@ bool treatDispensed = false;
 int treatStandBy = 120; // closed will also line up the dispensing holes
 int treatReload = 30;
 
+//configure auto turn off variables
+int offPin = 7;
+unsigned long lastUpdateMillis = 0;
+int turnOffAfterEllapsed = 30000; // 3minutes of no action
 
 void setup() {
   Serial.begin(115200);
@@ -64,16 +68,16 @@ void setup() {
   Serial.println(radio.begin());
   
   radio.setAutoAck(false);
-  radio.setChannel(78);
+  radio.setChannel(85);
   radio.setRetries(15,15);
     
 
   // Set the PA Level low to prevent power supply related issues since this is a
  // getting_started sketch, and the likelihood of close proximity of the devices. RF24_PA_MAX is default.
-  radio.setPALevel(RF24_PA_MAX);
+  radio.setPALevel(RF24_PA_MIN);
   // Open a writing and reading pipe on each radio, with opposite addresses
   radio.openReadingPipe(0,address);
-  //radio.setDataRate(RF24_250KBPS);
+  radio.setDataRate(RF24_250KBPS);
     
   // Start the radio listening for data
   radio.startListening();
@@ -83,6 +87,9 @@ void setup() {
   //Configure servos and button
   pinMode(laserPin, OUTPUT);
   digitalWrite(laserPin, LOW);
+
+  pinMode(offPin, OUTPUT);
+  digitalWrite(offPin, LOW);
   
   myXServo.attach(xServoPin );
   myXServo.easeTo(88,20);
@@ -99,18 +106,24 @@ void setup() {
   myXServo.setSpeed(150);  // This speed is taken if no speed argument is given.
   myYServo.setSpeed(150);
   treatServo.setSpeed(100);
+
+  lastUpdateMillis = millis();
 }
 
 void loop() {
 
 //To DO : treat dispense code is never being called.
     readData();
-    if(!win){
+   // if(!win){
       executeCommands(); 
-    }else if (!treatDispensed){
-      dispenseTreat();
+   // }else if (!treatDispensed){
+  //    dispenseTreat();
+  //  }
+
+    if(millis() - lastUpdateMillis > turnOffAfterEllapsed){
+      Serial.println("turning off");
+      digitalWrite(offPin, HIGH);
     }
-    
 } // Loop
 
 void dispenseTreat(){
@@ -135,16 +148,26 @@ void dispenseTreat(){
 void executeCommands(){
   unsigned long currentMillis = millis();
  
-   xValue = (map(data[xAxisIndex], 0, 1023, 10, 170));
-   yValue = (map(data[yAxisIndex], 0, 1023, 10, 170));
+   xValue = (map(data[xAxisIndex], 0, 1023, 25, 155));
+   yValue = (map(data[yAxisIndex], 0, 1023, 25, 155));
  
   myYServo.startEaseTo(yValue);
   myXServo.startEaseTo(xValue);
   synchronizeAllServosAndStartInterrupt(false);
+
+    /*Serial.print(F("Writing Data : "));
+      Serial.print("x cord :");  
+      Serial.print(xValue);
+      Serial.print(", y cord :");  
+      Serial.print(yValue);
+      Serial.print(", laser control :");  
+      Serial.print(data[2]);
+      Serial.print(", win scenario:");  
+      Serial.println(data[3]);*/
   
   do {
         // here you can call your own program
-        delay(REFRESH_INTERVAL / 1000); // optional 20ms delay - REFRESH_INTERVAL is in Microseconds
+        delay(REFRESH_INTERVAL / 500); // optional 20ms delay - REFRESH_INTERVAL is in Microseconds
     } while (!updateAllServos());
 
     if(data[laserIndex] != laserState && lastLaserExecute - currentMillis > exe_interval ){
@@ -164,10 +187,6 @@ void readData(){
       }
 
      int received = 1;
-      /*radio.stopListening();                                        // First, stop listening so we can talk   
-      radio.write( &received, sizeof(int) );              // Send the final one back.      
-      radio.startListening();                                       // Now, resume listening so we catch the next packets.     
-      */
 
       win = data[winIndex];
       // reset the game if treat was dispensed but the game is no longer a win
@@ -175,7 +194,7 @@ void readData(){
         treatDispensed = false;
       }
       
-      Serial.print(F("Got Data : "));
+      /*Serial.print(F("Got Data : "));
       Serial.print("x cord :");  
       Serial.print(data[0]);
       Serial.print(", y cord :");  
@@ -183,6 +202,10 @@ void readData(){
       Serial.print(", laser control :");  
       Serial.print(data[2]);
       Serial.print(", win scenario:");  
-      Serial.println(data[3]);
+      Serial.println(data[3]);*/
+
+
+      //TO DO : Check if data is different by more than 5 degrees and update the 
+      // 'last updated' time turn off if greater than 3 mins 
    }
 }
