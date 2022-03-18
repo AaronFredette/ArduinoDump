@@ -76,7 +76,7 @@ void setup() {
 
   // Set the PA Level low to prevent power supply related issues since this is a
   // getting_started sketch, and the likelihood of close proximity of the devices. RF24_PA_MAX is default.
-  radio.setPALevel(RF24_PA_MIN);
+  radio.setPALevel(RF24_PA_MAX);
   radio.setDataRate(RF24_250KBPS);
 
   // Open a writing and reading pipe on each radio, with opposite addresses
@@ -110,7 +110,7 @@ void readJoyStick() {
     controllerData[xAxisIndex] = xValue;
     controllerData[yAxisIndex] = yValue;
     controllerData[laserIndex] = !digitalRead(btnPin);
-    controllerData[winIndex] = !digitalRead(winPin);
+    controllerData[winIndex] = digitalRead(winPin);
     
     lastJoyStickReadMillis = currentMillis;
   }
@@ -122,15 +122,15 @@ void transmit() {
   // execute a simlar rate as joystick
   if (currentMillis - lastSendmillis >= joyStickReadInterval) {
     
-    /*Serial.println(F("Now sending: "));
+    Serial.print(F("Now sending: "));
     Serial.print("x cord : ");
-    Serial.println(controllerData[xAxisIndex]);
-    Serial.print("y cord : ");
-    Serial.println(controllerData[yAxisIndex]);
-    Serial.print("laser command : ");
-    Serial.println(controllerData[laserIndex]);
-    Serial.print("win scenario : ");
-    Serial.println(controllerData[winIndex]);*/
+    Serial.print(controllerData[xAxisIndex]);
+    Serial.print(", y cord : ");
+    Serial.print(controllerData[yAxisIndex]);
+    Serial.print(", laser command : ");
+    Serial.print(controllerData[laserIndex]);
+    Serial.print(", win scenario : ");
+    Serial.println(controllerData[winIndex]);
 
     radio.write(&controllerData, sizeof(controllerData));
     lastSendmillis = millis();
