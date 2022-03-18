@@ -25,6 +25,7 @@ RF24 radio(10,8); // pro mini ce, csn
 //byte addresses[][6] = {"1Node","2Node"};
 const byte address[6] = "06720";
 int data[4];
+int dataIdle[4];
 //define indexes in data array to avoid confusion
 int xAxisIndex = 0;
 int yAxisIndex = 1;
@@ -60,7 +61,7 @@ int treatReload = 30;
 //configure auto turn off variables
 int offPin = 7;
 unsigned long lastUpdateMillis = 0;
-int turnOffAfterEllapsed = 30000; // 3minutes of no action
+int turnOffAfterEllapsed = 180000; // 3minutes of no action
 
 void setup() {
   Serial.begin(115200);
@@ -114,14 +115,14 @@ void loop() {
 
 //To DO : treat dispense code is never being called.
     readData();
-   // if(!win){
+    checkForIdle();
+    if(!win){
       executeCommands(); 
-   // }else if (!treatDispensed){
-  //    dispenseTreat();
-  //  }
+    }else if (!treatDispensed){
+      dispenseTreat();
+    }
 
     if(millis() - lastUpdateMillis > turnOffAfterEllapsed){
-      Serial.println("turning off");
       digitalWrite(offPin, HIGH);
     }
 } // Loop
@@ -137,8 +138,6 @@ void dispenseTreat(){
     } while (!updateAllServos());
     
   Serial.println("dispense");
-  delay(1000);
-  
   treatServo.easeTo(treatStandBy);
   delay(1000);
   treatDispensed = true;
@@ -149,7 +148,7 @@ void executeCommands(){
   unsigned long currentMillis = millis();
  
    xValue = (map(data[xAxisIndex], 0, 1023, 25, 155));
-   yValue = (map(data[yAxisIndex], 0, 1023, 25, 155));
+   yValue = (map(data[yAxisIndex], 0, 1023, 50, 135));
  
   myYServo.startEaseTo(yValue);
   myXServo.startEaseTo(xValue);
@@ -170,11 +169,13 @@ void executeCommands(){
         delay(REFRESH_INTERVAL / 500); // optional 20ms delay - REFRESH_INTERVAL is in Microseconds
     } while (!updateAllServos());
 
-    if(data[laserIndex] != laserState && lastLaserExecute - currentMillis > exe_interval ){
+    if(data[laserIndex] == 1 && currentMillis - lastLaserExecute > exe_interval ){
+      
       Serial.print(" changing laser state to : ");
-      Serial.println(data[laserIndex]);
-      digitalWrite(laserPin, data[laserIndex]);
-      laserState = data[laserIndex];
+      laserState = !laserState;
+      Serial.println(laserState);
+      digitalWrite(laserPin, laserState);
+      lastLaserExecute = millis();
     }
  
 }
@@ -203,9 +204,18 @@ void readData(){
       Serial.print(data[2]);
       Serial.print(", win scenario:");  
       Serial.println(data[3]);*/
-
-
-      //TO DO : Check if data is different by more than 5 degrees and update the 
-      // 'last updated' time turn off if greater than 3 mins 
    }
+}
+
+void checkForIdle(){
+  //check if the values for x and y in the new data array are different
+  // if true set value of lastUpdated to millis()
+  int toleranceVal = 5; // margin of error for blips in signal
+  if(abs(data[xAxisIndex] - dataIdle[xAxisIndex]) > toleranceVal ||
+     abs(data[yAxisIndex] - dataIdle[yAxisIndex]) > toleranceVal){
+    lastUpdateMillis = millis();
+  }
+
+  //update dataIdle with values from data for next check
+  memcpy(dataIdle, data, sizeof(dataIdle));
 }
